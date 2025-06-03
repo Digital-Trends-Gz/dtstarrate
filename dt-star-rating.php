@@ -92,7 +92,8 @@ add_action('admin_enqueue_scripts', 'my_enqueue_bootstrap_admin_only');
 
 // Shortcode to show star rating
 add_shortcode('star_rating', function () {
-    if (!is_singular('post')) return '';
+    // we delete becouse abo ahmad want to show in page
+    // if (!is_singular('post')) return '';
 
     global $post, $wpdb;
     $post_id = $post->ID;
@@ -175,20 +176,45 @@ add_shortcode('star_rating', function () {
 <?php if ($google_enabled && !empty($types)): ?>
   <?php foreach ($types as $type): ?>
     <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "<?php echo esc_js($type); ?>",
-      "name": "<?php echo esc_js($app_name); ?>",
-      "operatingSystem": "iOS, Android",
-      "applicationCategory": "UtilitiesApplication",
-      "aggregateRating": {
-        "@type": "AggregateRating",
+  {
+        "@type": "<?php echo esc_js($type); ?>",
+           "name": "<?php echo esc_js($app_name); ?>",
+        "alternateName": [
+          "Instagram downloader",
+          "<?php echo esc_js($app_name); ?>",
+          "<?php echo esc_js($app_name); ?> APP",
+          "<?php echo esc_js($app_name); ?>.com"
+        ],
+        "url": "<?php echo get_site_url();?>",
+        "image": "<?php echo get_theme_mod('custom_logo'); ?>",
+        "operatingSystem": "Windows, Linux, iOS, Android, OSX, macOS",
+        "applicationCategory": "UtilitiesApplication",
+        "featureList": [
+          "HD Profile downloader"
+          "Photo downloader",
+          "Video Downloader",
+          "Reel Downloader",
+          "IGTV Downloader",
+          "Gallery Downloader",
+          "Story Downloader",
+          "Highlights Downloader"
+        ],
+        "contentRating": "Everyone",
+        "aggregateRating": {
+          "@type": "AggregateRating",
         "ratingValue": "<?php echo esc_js($avg); ?>",
         "reviewCount": "<?php echo esc_js($total_votes); ?>"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": "0"
+        }
       }
-    }
     </script>
   <?php endforeach; ?>
+
+
+
 <?php endif; ?>
     <?php return ob_get_clean();
 });
@@ -501,7 +527,7 @@ function my_plugin_settings_page() {
 function bulk_add_ratings_shortcode() {
     // Fetch all published posts
     $posts = get_posts(array(
-        'post_type' => 'post',
+    'post_type'   => array('post', 'page'),
         'numberposts' => -1,
         'post_status' => 'publish'
     ));
@@ -551,7 +577,7 @@ add_action('wp_ajax_myplugin_get_rating_data_bulk_add', 'bulk_add_ratings_shortc
 
 function bulk_delete_ratings_shortcode() {
     $posts = get_posts(array(
-        'post_type' => 'post',
+        'post_type'   => array('post', 'page'),
         'numberposts' => -1,
         'post_status' => 'publish'
     ));
@@ -614,7 +640,50 @@ function my_plugin_settings_init() {
         'my_plugin_section_id'
     );
 }
+function delete_ratings_shortcode() {
+    $post_id = intval($_POST['post_id']);
+    $shortcode = sanitize_text_field($_POST['shortcode']);
 
+    // Get the post
+    $post = get_post($post_id);
+    if (!$post) {
+        wp_send_json_error('Post not found');
+    }
+
+    $success = false;
+    $msg = "";
+    $count = 0;
+        // Check if shortcode exists in content
+        if (false !== strpos($post->post_content, '[star_rating]')) {
+            // Remove all instances of the shortcode
+            $updated_content = str_replace('[star_rating]', '', $post->post_content);
+            
+            // Update the post if content changed
+            if ($updated_content !== $post->post_content) {
+                wp_update_post(array(
+                    'ID' => $post->ID,
+                    'post_content' => $updated_content
+                ));
+                $success = true;
+            }
+        }
+    
+    
+    if ($success) {
+        $msg = "Removed [star_rating] shortcode from  posts";
+    } else {
+        $msg = "No posts contained the [star_rating] shortcode"; 
+    }
+    
+    $json_data = array(
+        "status" => 200,
+        "success" => $success,
+        "msg" => $msg,
+    );
+    
+    wp_send_json($json_data);
+}
+add_action('wp_ajax_myplugin_get_rating_data_delete', 'delete_ratings_shortcode');
 function my_plugin_field_callback() {
     $option = get_option('my_plugin_option_name');
     echo '<input type="text" name="my_plugin_option_name" value="' . esc_attr($option) . '">';
@@ -792,11 +861,12 @@ function dt_rate_specific_post_table() {
     
     // Main query with pagination
     $sql = "SELECT 
-                ID, 
-                post_title,
-                post_content    
-            FROM $post_table
-           where post_status = 'publish' AND post_type = 'post'";
+            ID, 
+            post_title,
+            post_content    
+        FROM $post_table
+        WHERE post_status = 'publish' 
+        AND post_type IN ('post', 'page')";
             if (!empty($searchQuery)) {
             $sql .= $searchQuery;
         }

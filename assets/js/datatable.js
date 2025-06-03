@@ -111,6 +111,54 @@ jQuery(document).ready(function($) {
             type: 'POST',
          data: {
             post_id: postId,
+            },
+            success: function(response) {
+                 if (response.success == false){
+                            swal.fire("sorry!", response.msg, "error");
+                        }else{
+                            swal.fire("Done", response.msg, "success");
+                                   setTimeout(() => {
+                        $('#dt-rate-post-table_in_modal').DataTable().ajax.reload();
+                    }, 1000);
+                        }
+          
+            },
+            error: function(xhr) {
+                button.html('Failed!').css('color', 'red');
+                console.error('Error:', xhr.responseText);
+            }
+        });
+            }}});
+        
+  
+    });
+    $('#dt-rate-post-table_in_modal').on('click', '.delete_short_code', function() {
+        const button = $(this);
+        const postId = button.data('id');
+        const action = button.data('action');
+        var shortcode = '[star_rating]'; // Your shortcode here
+
+        
+        // Add loading state
+        button.prop('disabled', true).html('<i class="dashicons dashicons-update spin"></i>');
+                swal.fire({
+                  title: 'Are you sure?',
+        text: 'You will Delete the rating for all post ',
+        showCancelButton: true,
+             icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, submit it!',
+            cancelButtonText: 'No, cancel it',
+        focusConfirm: false,
+    }).then(function (e) {
+            if (e.isConfirmed) {
+            if (e.isConfirmed && e.value) {
+                const position = e.value;
+      $.ajax({
+            url: ajaxurl +'?action=myplugin_get_rating_data_delete',
+            type: 'POST',
+         data: {
+            post_id: postId,
             shortcode: shortcode,
             position: position
             },
@@ -134,7 +182,6 @@ jQuery(document).ready(function($) {
         
   
     });
-
     }
 
         });
