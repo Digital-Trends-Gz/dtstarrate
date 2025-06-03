@@ -123,7 +123,7 @@ add_shortcode('star_rating', function () {
             <div class="rated__items">
                 <!-- Average rating -->
                 <div class="rated-reviews">
-                    <span class="rated-reviews__counter" id="js-ratingValue"><?php echo $avg; ?></span>
+                    <span class="rated-reviews__counter test" id="js-ratingValue"><?php echo $avg; ?></span>
                     <?php
                     $avg = number_format((float)$avg, 1);
                     $rounded_avg = number_format((floor($avg * 2) / 2), 1); // e.g. 4.3 → 4.0, 4.6 → 4.5
