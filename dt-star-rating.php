@@ -10,16 +10,16 @@ defined('ABSPATH') || exit;
 
 require 'plugin-update-checker/plugin-update-checker.php';
 $myUpdateChecker = Puc_v4_Factory::buildUpdateChecker(
-    'https://github.com/ziadaboalkamar/dt-star-rating',
+    'https://github.com/Digital-Trends-Gz/dtstarrate',
     __FILE__,
-    'dt-star-rating'
+    'dtstarrate'
 );
 
 //Set the branch that contains the stable release.
 $myUpdateChecker->setBranch('main');
 
 //Optional: If you're using a private repository, specify the access token like this:
-$myUpdateChecker->setAuthentication('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');
+// $myUpdateChecker->setAuthentication('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');
 
 
 // Create custom table on plugin activation
