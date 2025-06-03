@@ -1,0 +1,89 @@
+.card {
+    box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
+    border: none;
+    margin-top: 30px;
+    text-align: center;
+    padding: 30px;
+        width: 100%;
+    max-width: 100%;
+}
+.card.user_rated {
+    background: #FF9B17;
+    color: white;
+}
+.card.post_rared {
+    background-color: #F16767;
+    color: white;
+}
+.card.post_text {
+    background-color: #27548A;
+    color: white;
+}
+.post_link{
+    color: white;
+    text-decoration: none;
+}
+.post_link:hover{
+    color: white;
+    text-decoration: none;
+}
+
+h3.title_of_table {
+    margin-top: 30px;
+    text-align: center;
+}
+.posts_card .card-header{
+    text-align: left;
+}
+.posts_card td{
+    text-align: center;
+}
+#dt-rate-post-table td {
+    text-align: left;
+}
+.dataTables_wrapper .dataTables_length select{
+    width: 45px;
+}
+.setting_card{
+    text-align: justify;
+}
+.header_setting{
+    margin-bottom: 30px;
+    margin-top: 30px;
+}
+button.add_post_setting {
+    border: none;
+    padding: 7px 17px;
+    border-radius: 8px;
+    background-color: #483AA0;
+    color: white;
+    font-size: 13px;
+}
+.delete_button{
+    background-color: #de2631 !important;
+}
+button.add_post_setting.specific_button {
+    background-color: #7F55B1;
+    /* color: black; */
+}
+#dt-rate-post-table_in_modal a{
+    text-decoration: none;
+}
+.col_buttoon_activate{
+	text-align: right;
+}
+#disactivate_google_snippet{
+    background-color: #de2631;
+}
+.form-check .form-check-input{
+    margin-top: 9px
+}
+#save_type_google_snippet{
+    margin-top: 30px;
+}
+.type_checkbox{
+    display: none;
+}
+.type_checkbox.ds_block{
+    display: block;
+}

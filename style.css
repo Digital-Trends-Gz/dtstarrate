@@ -1,0 +1,425 @@
+#star-rating .star {
+    font-size: 2em;
+    cursor: pointer;
+    color: #ccc;
+}
+#star-rating .star:hover,
+#star-rating .star.selected {
+    color: gold;
+}
+
+.rated {
+	box-sizing: border-box;
+	background: #f2f2f6;
+}
+
+@media (min-width: 960px) {
+	.rated {
+		padding-top:45px;
+		padding-bottom: 48px
+	}
+}
+
+.rated * {
+	box-sizing: border-box
+}
+
+.rated__wrapper {
+	width: 100%;
+	max-width: 1052px;
+	padding: 0 14px;
+	margin: auto;
+	position: relative;
+	z-index: 3
+}
+
+.rated__items {
+	display: grid;
+	grid-template-columns: 1fr;
+	grid-template-rows: 1fr;
+	grid-column-gap: 62px;
+	grid-row-gap: 51px;
+	-webkit-justify-content: center;
+	justify-content: center;
+	margin: 0 auto
+}
+
+@media (min-width: 960px) {
+	.rated__items {
+		grid-template-columns:1fr 2fr 1fr;
+		margin: 0 auto
+	}
+}
+
+.rated__buttons {
+	display: -webkit-flex;
+	display: flex;
+	-webkit-justify-content: center;
+	justify-content: center
+}
+
+@media (min-width: 960px) {
+	.rated__buttons {
+		width:100%;
+		max-width: 515px;
+		margin: auto
+	}
+}
+
+.rated__button {
+	font-size: 16px;
+	line-height: 22px;
+	width: 240px;
+	margin: 34px 0 60px;
+	border-radius: 6px
+}
+
+.rated__button.custom-btn {
+	background-color: #7cb937;
+	min-width: 240px
+}
+
+@media (min-width: 960px) {
+	.rated__button {
+		width:220px;
+		box-shadow: none;
+		margin: 53px 15px 0
+	}
+
+	.rated__button.custom-btn {
+		min-width: 220px;
+		width: 220px
+	}
+}
+
+.rated__button.button-v {
+	box-shadow: none;
+	background-color: #7cb937
+}
+
+.rated-reviews {
+	display: -webkit-flex;
+	display: flex;
+	-webkit-flex-wrap: wrap;
+	flex-wrap: wrap
+}
+
+.rated-reviews:nth-child(1),.rated-reviews:nth-child(3) {
+	max-width: 150px;
+	width: 100%;
+	-webkit-justify-content: center;
+	justify-content: center;
+	text-align: center;
+	gap: 8px
+}
+
+@media (max-width: 991px) {
+	.rated-reviews:nth-child(1) {
+		margin:0 auto;
+	}
+}
+
+.rated-reviews:nth-child(3) {
+	-webkit-flex-direction: column;
+	flex-direction: column;
+	-webkit-align-items: center;
+	align-items: center;
+	gap: 25px;
+	/* border: 1px dashed #546e7a; */
+	max-width: initial;
+}
+
+@media (min-width: 960px) {
+	.rated-reviews:nth-child(3) {
+		-webkit-align-items:end;
+		align-items: end;
+		-webkit-justify-content: right;
+		justify-content: right;
+		border: 1px dashed #546e7a;
+		background-color: #303947;
+		border-radius: 12px;
+		padding: 16px;
+		position: relative;
+		display: flex;
+		align-items: center;
+		/* margin-top: 16px; */
+		background-color: #fff;
+	}
+}
+
+.rated-reviews:nth-child(3) img {
+	position: relative
+}
+
+.rated-reviews:nth-child(3) .trustpilot {
+	right: 13px
+}
+
+[lang=ar] .rated-reviews:nth-child(3) .trustpilot {
+	right: 0
+}
+
+.rated-reviews:nth-child(3) .sitejabber {
+	right: 15px
+}
+
+[lang=ar] .rated-reviews:nth-child(3) .sitejabber {
+	right: 0
+}
+
+.rated-reviews:nth-child(3) .reseller {
+	right: -3px
+}
+
+[lang=ar] .rated-reviews:nth-child(3) .reseller {
+	right: 0
+}
+
+.rated-reviews__counter {
+	position: relative;
+	font-weight: 700;
+	font-size: 56px;
+	line-height: 56px;
+	color: #202630;
+	text-align: right;
+	width: 85px
+}
+
+.rated-reviews__counter i {
+	position: absolute;
+	left: 33px;
+	bottom: 0
+}
+
+.rated-reviews__count {
+	font-size: 14px;
+	line-height: 22px;
+	font-weight: 400;
+	color: #546e7a
+}
+
+.rated-reviews__ratings {
+	display: -webkit-flex;
+	display: flex;
+	-webkit-flex-direction: column;
+	flex-direction: column;
+	width: 100%;
+	gap: 8px
+}
+
+.rated-reviews__rating {
+	display: -webkit-flex;
+	display: flex;
+	-webkit-flex-direction: row;
+	flex-direction: row;
+	-webkit-align-items: center;
+	align-items: center;
+	-webkit-justify-content: flex-start;
+	justify-content: flex-start;
+	gap: 23px;
+	width: 100%;
+	max-width: 438px;
+	margin: 0 auto
+}
+
+@media (min-width: 960px) {
+	.rated-reviews__rating {
+		gap:25px
+	}
+}
+
+.rated-reviews__number {
+	display: -webkit-flex;
+	display: flex;
+	-webkit-flex-direction: row;
+	flex-direction: row;
+	-webkit-align-items: center;
+	align-items: center;
+	gap: 4px;
+	font-weight: 700;
+	font-size: 14px;
+	line-height: 20px;
+	text-align: center;
+	letter-spacing: -.5px;
+	color: #000
+}
+
+.rated-reviews__progressbar {
+	max-width: 329px;
+	width: 100%;
+	height: 10px;
+	background: #fff
+}
+
+.rated-reviews__progressbar span {
+	display: none
+}
+
+.rated-reviews__amount {
+	font-weight: 400;
+	font-size: 14px;
+	line-height: 22px;
+	color: #546e7a;
+	width: 46px
+}
+
+.bar {
+	height: 10px;
+	width: 0
+}
+
+.animate .bar--color-lime {
+	background: #a5d330;
+	-webkit-animation: rate-load-2 2.5s normal forwards;
+	animation: rate-load-2 2.5s normal forwards;
+	-webkit-animation-delay: .4s;
+	animation-delay: .4s
+}
+
+.animate .bar--color-green {
+	background: #4da852;
+	-webkit-animation: rate-load-1 2.5s normal forwards;
+	animation: rate-load-1 2.5s normal forwards
+}
+
+.animate .bar--color-yellow {
+	background: #f7e83e;
+	-webkit-animation: rate-load-3 2.5s normal forwards;
+	animation: rate-load-3 2.5s normal forwards;
+	-webkit-animation-delay: .6s;
+	animation-delay: .6s
+}
+
+.animate .bar--color-orange {
+	background: #fba62a;
+	-webkit-animation: rate-load-4 2.5s normal forwards;
+	animation: rate-load-4 2.5s normal forwards;
+	-webkit-animation-delay: .8s;
+	animation-delay: .8s
+}
+
+.animate .bar--color-red {
+	background: #f13916;
+	-webkit-animation: rate-load-5 2.5s normal forwards;
+	animation: rate-load-5 2.5s normal forwards;
+	-webkit-animation-delay: 1s;
+	animation-delay: 1s
+}
+
+@-webkit-keyframes rate-load-1 {
+	0% {
+		width: 0
+	}
+
+	to {
+		width: 95%
+	}
+}
+
+@keyframes rate-load-1 {
+	0% {
+		width: 0
+	}
+
+	to {
+		width: 95%
+	}
+}
+
+@-webkit-keyframes rate-load-2 {
+	0% {
+		width: 0
+	}
+
+	to {
+		width: 48%
+	}
+}
+
+@keyframes rate-load-2 {
+	0% {
+		width: 0
+	}
+
+	to {
+		width: 48%
+	}
+}
+
+@-webkit-keyframes rate-load-3 {
+	0% {
+		width: 0
+	}
+
+	to {
+		width: 17%
+	}
+}
+
+@keyframes rate-load-3 {
+	0% {
+		width: 0
+	}
+
+	to {
+		width: 17%
+	}
+}
+
+@-webkit-keyframes rate-load-4 {
+	0% {
+		width: 0
+	}
+
+	to {
+		width: 12%
+	}
+}
+
+@keyframes rate-load-4 {
+	0% {
+		width: 0
+	}
+
+	to {
+		width: 12%
+	}
+}
+
+@-webkit-keyframes rate-load-5 {
+	0% {
+		width: 0
+	}
+
+	to {
+		width: 3%
+	}
+}
+
+@keyframes rate-load-5 {
+	0% {
+		width: 0
+	}
+
+	to {
+		width: 3%
+	}
+}
+
+#js-ratingValue {
+    text-align: center;
+}
+#js-ratingValue2 {
+    position: relative;
+    font-weight: 700;
+    font-size: 22px;
+    line-height: 56px;
+    color: #202630;
+    text-align: right;
+    width: 118px;
+    /* color: #fff; */
+}
+
+.rated__wrapper {
+    padding: 20px 14px;
+}

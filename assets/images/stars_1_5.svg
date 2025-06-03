@@ -1,0 +1,28 @@
+<svg width="144" height="30" viewBox="0 0 144 30" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(0, 3)">
+    <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24 14.81 8.63 12 2 9.19 8.63 2 9.24 7.46 13.97 5.82 21z" fill="none" stroke="gold" stroke-width="2"/>
+  </g>
+  <g transform="translate(0, 3)">
+    <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24 14.81 8.63 12 2 9.19 8.63 2 9.24 7.46 13.97 5.82 21z" fill="gold"/>
+  </g>
+  <g transform="translate(30, 3)">
+    <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24 14.81 8.63 12 2 9.19 8.63 2 9.24 7.46 13.97 5.82 21z" fill="none" stroke="gold" stroke-width="2"/>
+  </g>
+  <defs>
+    <clipPath id="clip-half-1">
+      <rect x="0" y="0" width="12" height="24"/>
+    </clipPath>
+  </defs>
+  <g transform="translate(30, 3)" clip-path="url(#clip-half-1)">
+    <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24 14.81 8.63 12 2 9.19 8.63 2 9.24 7.46 13.97 5.82 21z" fill="gold"/>
+  </g>
+  <g transform="translate(60, 3)">
+    <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24 14.81 8.63 12 2 9.19 8.63 2 9.24 7.46 13.97 5.82 21z" fill="none" stroke="gold" stroke-width="2"/>
+  </g>
+  <g transform="translate(90, 3)">
+    <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24 14.81 8.63 12 2 9.19 8.63 2 9.24 7.46 13.97 5.82 21z" fill="none" stroke="gold" stroke-width="2"/>
+  </g>
+  <g transform="translate(120, 3)">
+    <path d="M12 17.27L18.18 21 16.54 13.97 22 9.24 14.81 8.63 12 2 9.19 8.63 2 9.24 7.46 13.97 5.82 21z" fill="none" stroke="gold" stroke-width="2"/>
+  </g>
+</svg>
