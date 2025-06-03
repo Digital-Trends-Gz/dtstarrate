@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DT Star Rating System
  * Description: Adds a star rating to posts with IP and cookie-based voting protection.
- * Version: 1.0
+ * Version: 1.2
  * Author: D.T. Company
  */
 
@@ -886,6 +886,9 @@ function dt_star_google_snipet(){
             </div>
             <div class="col ">
                 <div class="col_buttoon_activate">
+             <?php if(!$google_snippet) {?>
+            <button class="add_post_setting" id="activate_google_snippet">Activate Google Snippet</button>
+            <?php }?>
                     <?php if($google_snippet && $google_snippet["dt_google"] == false) {?>
             <button class="add_post_setting" id="activate_google_snippet">Activate Google Snippet</button>
             <?php } elseif ($google_snippet && $google_snippet["dt_google"] == true){?>
