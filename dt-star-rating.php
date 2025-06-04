@@ -889,14 +889,27 @@ function dt_rate_specific_post_table() {
         $order_by = " ORDER BY " . $columns[$order_column]['db'] . " " . $order_direction;
     }
     
-    // Main query with pagination
-    $sql = "SELECT 
-            ID, 
-            post_title,
-            post_content    
-        FROM $post_table
-        WHERE post_status = 'publish' 
-        AND post_type IN ('post', 'page')";
+$sql = "SELECT 
+            p.ID, 
+            p.post_title,
+            p.post_content    
+        FROM $post_table p";
+
+if (function_exists('icl_object_id')) {
+    // WPML is active: only get original posts
+    $sql .= " 
+        JOIN {$wpdb->prefix}icl_translations t 
+        ON p.ID = t.element_id 
+        WHERE p.post_status = 'publish'
+        AND p.post_type IN ('post', 'page')
+        AND t.element_type IN ('post_post', 'post_page')
+        AND t.source_language_code IS NULL";
+} else {
+    // WPML is not active: get all posts
+    $sql .= " 
+        WHERE p.post_status = 'publish'
+        AND p.post_type IN ('post', 'page')";
+}
             if (!empty($searchQuery)) {
             $sql .= $searchQuery;
         }
