@@ -111,6 +111,7 @@ jQuery(document).ready(function($) {
             type: 'POST',
          data: {
             post_id: postId,
+            shortcode: shortcode
             },
             success: function(response) {
                  if (response.success == false){

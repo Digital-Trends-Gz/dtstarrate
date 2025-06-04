@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DT Star Rating System
  * Description: Adds a star rating to posts with IP and cookie-based voting protection.
- * Version: 1.6
+ * Version: 1.7
  * Author: D.T. Company
  */
 
@@ -821,10 +821,10 @@ function add_short_code_for_post() {
             wp_send_json_error("No translations updated");
         }
     } else {
+       
         // WPML not active: only update current post
         $updated_content = place_of_add_short_code($position, $post->post_content, $shortcode);
-
-        $updated_post = array(
+              $updated_post = array(
             'ID'           => $post_id,
             'post_content' => $updated_content,
         );
@@ -952,7 +952,6 @@ function dt_rate_specific_post_table() {
 
 function place_of_add_short_code($place, $content, $short_code) {
     $place = (int)$place;
-
     if ($place === 0) {
         $content = $short_code . $content;
 
@@ -960,6 +959,7 @@ function place_of_add_short_code($place, $content, $short_code) {
         $paragraphs = explode('</p>', $content);
 
         if (count($paragraphs) > 1) {
+            
             $middle_pos = floor(count($paragraphs) / 2);
             $paragraphs[$middle_pos] .= '</p>' . $short_code;
             $content = implode('</p>', $paragraphs);
