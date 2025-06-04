@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DT Star Rating System
  * Description: Adds a star rating to posts with IP and cookie-based voting protection.
- * Version: 1.5
+ * Version: 1.6
  * Author: D.T. Company
  */
 
@@ -779,50 +779,66 @@ function myplugin_get_rating_data_callback() {
 }
 
 function add_short_code_for_post() {
-    // Get the post ID and other data from the AJAX request
+    // Get the post ID and other data from AJAX request
     $post_id = intval($_POST['post_id']);
     $shortcode = sanitize_text_field($_POST['shortcode']);
     $position = isset($_POST['position']) ? intval($_POST['position']) : 0;
 
-    // Get the original post
-    $original_post = get_post($post_id);
-    if (!$original_post) {
+    // Get the post
+    $post = get_post($post_id);
+    if (!$post) {
         wp_send_json_error('Post not found');
     }
 
-    // Get the WPML element ID and translations
-    $trid = apply_filters( 'wpml_element_trid', null, $post_id, 'post_' . $original_post->post_type );
-    $translations = apply_filters( 'wpml_get_element_translations', null, $trid, 'post_' . $original_post->post_type );
+    // Check if WPML is active
+    if (function_exists('icl_object_id')) {
+        // WPML is active: update all translations
+        $trid = apply_filters('wpml_element_trid', null, $post_id, 'post_' . $post->post_type);
+        $translations = apply_filters('wpml_get_element_translations', null, $trid, 'post_' . $post->post_type);
 
-    $updated_count = 0;
+        $updated_count = 0;
 
-    foreach ($translations as $lang => $translation) {
-        $translated_post = get_post($translation->element_id);
+        foreach ($translations as $lang => $translation) {
+            $translated_post = get_post($translation->element_id);
+            if (!$translated_post) continue;
 
-        if (!$translated_post) continue;
+            $updated_content = place_of_add_short_code($position, $translated_post->post_content, $shortcode);
 
-        // Update the content with the shortcode
-        $updated_content = place_of_add_short_code($position, $translated_post->post_content, $shortcode);
+            $updated_post = array(
+                'ID'           => $translated_post->ID,
+                'post_content' => $updated_content,
+            );
+
+            $result = wp_update_post($updated_post);
+            if (!is_wp_error($result)) {
+                $updated_count++;
+            }
+        }
+
+        if ($updated_count > 0) {
+            wp_send_json_success("Shortcode added to $updated_count translations successfully");
+        } else {
+            wp_send_json_error("No translations updated");
+        }
+    } else {
+        // WPML not active: only update current post
+        $updated_content = place_of_add_short_code($position, $post->post_content, $shortcode);
 
         $updated_post = array(
-            'ID'           => $translated_post->ID,
+            'ID'           => $post_id,
             'post_content' => $updated_content,
         );
 
-        // Update the translated post
         $result = wp_update_post($updated_post);
 
-        if (!is_wp_error($result)) {
-            $updated_count++;
+        if ($result) {
+            wp_send_json_success('Shortcode added successfully');
+        } else {
+            wp_send_json_error('Failed to update post');
         }
     }
-
-    if ($updated_count > 0) {
-        wp_send_json_success("Shortcode added to $updated_count translations successfully");
-    } else {
-        wp_send_json_error('Failed to update any translation');
-    }
 }
+
 
 add_action('wp_ajax_dt_rate_specific_post_add', 'add_short_code_for_post');
 
