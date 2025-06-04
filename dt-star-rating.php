@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DT Star Rating System
  * Description: Adds a star rating to posts with IP and cookie-based voting protection.
- * Version: 1.8
+ * Version: 1.10
  * Author: D.T. Company
  */
 
@@ -33,6 +33,7 @@ register_activation_hook(__FILE__, function () {
         post_id BIGINT(20) NOT NULL,
         rating INT(1) NOT NULL,
         ip_address VARCHAR(45) NOT NULL,
+        post_parent_id BIGINT(20) DEFAULT 0 ,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
         UNIQUE KEY unique_vote (post_id, ip_address)
@@ -222,15 +223,15 @@ add_shortcode('star_rating', function () {
 // AJAX handler
 add_action('wp_ajax_submit_rating', 'submit_star_rating');
 add_action('wp_ajax_nopriv_submit_rating', 'submit_star_rating');
-
 function submit_star_rating() {
     global $wpdb;
+
     $post_id = intval($_POST['post_id']);
     $rating = intval($_POST['rating']);
     $ip = $_SERVER['REMOTE_ADDR'];
     $table = $wpdb->prefix . 'post_ratings';
 
-    // Check if already rated
+    // Check if user has already rated
     $already = $wpdb->get_var($wpdb->prepare(
         "SELECT COUNT(*) FROM $table WHERE post_id = %d AND ip_address = %s",
         $post_id, $ip
@@ -239,11 +240,34 @@ function submit_star_rating() {
     if ($already || isset($_COOKIE["rated_post_$post_id"])) {
         echo 'You have already rated this post.';
     } else {
-        $wpdb->insert($table, [
-            'post_id' => $post_id,
-            'rating' => $rating,
+        // Set default data
+        $data = [
+            'post_id'    => $post_id,
+            'rating'     => $rating,
             'ip_address' => $ip,
-        ]);
+        ];
+
+        // If WPML is active, get and add post_parent_id
+        if (function_exists('wpml_get_element_translations')) {
+            $post = get_post($post_id);
+            if ($post) {
+                $element_type = 'post_' . $post->post_type;
+                $trid = apply_filters('wpml_element_trid', null, $post_id, $element_type);
+
+                if ($trid) {
+                    $translations = apply_filters('wpml_get_element_translations', null, $trid, $element_type);
+                    foreach ($translations as $lang => $translation) {
+                        if ($translation->original === 1) {
+                            $data['post_parent_id'] = $translation->element_id;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Insert rating with optional post_parent_id
+        $wpdb->insert($table, $data);
 
         // Set a cookie for 1 year
         setcookie("rated_post_$post_id", '1', time() + 365 * DAY_IN_SECONDS, "/");
@@ -253,6 +277,7 @@ function submit_star_rating() {
 
     wp_die();
 }
+
 add_action('admin_menu', 'dt_star_create_menu');
 
 function dt_star_create_menu() {
@@ -525,47 +550,77 @@ function my_plugin_settings_page() {
 // add_filter('the_content', 'auto_add_ratings_to_posts');
 // Run this once to add to all existing posts
 function bulk_add_ratings_shortcode() {
-    // Fetch all published posts
-    $posts = get_posts(array(
-    'post_type'   => array('post', 'page'),
-        'numberposts' => -1,
-        'post_status' => 'publish'
-    ));
-
     $success = false;
-    $msg = "";
-    $count = 0; // 🛑 Initialize $count to avoid undefined variable warning
-    $added = 0; // 👍 Track how many posts were actually updated
-
-    // Make sure "position" is coming from POST and is a valid int
+    $count   = 0;
+    $added   = 0;
     $position = isset($_POST['position']) ? intval($_POST['position']) : 0;
 
-    foreach ($posts as $post) {
-        // Check if shortcode already exists
-        if (strpos($post->post_content, '[star_rating]') === false) {
-            $updated_content = place_of_add_short_code($position, $post->post_content, "\n[star_rating]");
-            
-            // Update the post with new content
-            wp_update_post(array(
-                'ID' => $post->ID,
-                'post_content' => $updated_content
-            ));
+    if (function_exists('icl_object_id')) {
+        // WPML is active: only loop over parent posts
+        global $wpdb;
 
-            $added++; // increment how many posts were updated
-            $success = true;
+        $parents = $wpdb->get_results("
+            SELECT p.ID, p.post_type
+            FROM {$wpdb->posts} p
+            INNER JOIN {$wpdb->prefix}icl_translations t
+                ON p.ID = t.element_id
+            WHERE p.post_status = 'publish'
+              AND p.post_type IN ('post', 'page')
+              AND t.source_language_code IS NULL
+        ");
+
+        foreach ($parents as $parent) {
+            $trid = apply_filters('wpml_element_trid', null, $parent->ID, 'post_' . $parent->post_type);
+            $translations = apply_filters('wpml_get_element_translations', null, $trid, 'post_' . $parent->post_type);
+
+            foreach ($translations as $translation) {
+                $translated_post = get_post($translation->element_id);
+                if (!$translated_post) continue;
+
+                $count++;
+
+                if (strpos($translated_post->post_content, '[star_rating]') === false) {
+                    $updated_content = place_of_add_short_code($position, $translated_post->post_content, "\n[star_rating]");
+
+                    wp_update_post(array(
+                        'ID' => $translated_post->ID,
+                        'post_content' => $updated_content
+                    ));
+
+                    $added++;
+                    $success = true;
+                }
+            }
         }
-
-        $count++; // track total processed posts
-    }
-
-    // Final message logic
-    if ($added === 0) {
-        $msg = "All $count posts already have the star rating.";
     } else {
-        $msg = "Added star rating to $added posts out of $count.";
+        // WPML not active: fetch all published posts/pages
+        $posts = get_posts(array(
+            'post_type'   => array('post', 'page'),
+            'numberposts' => -1,
+            'post_status' => 'publish'
+        ));
+
+        foreach ($posts as $post) {
+            $count++;
+
+            if (strpos($post->post_content, '[star_rating]') === false) {
+                $updated_content = place_of_add_short_code($position, $post->post_content, "\n[star_rating]");
+
+                wp_update_post(array(
+                    'ID' => $post->ID,
+                    'post_content' => $updated_content
+                ));
+
+                $added++;
+                $success = true;
+            }
+        }
     }
 
-    // Return JSON response
+    $msg = ($added === 0)
+        ? "All $count post(s) already have the star rating."
+        : "Added star rating to $added post(s) out of $count.";
+
     wp_send_json(array(
         "status" => 200,
         "success" => $success,
@@ -573,51 +628,88 @@ function bulk_add_ratings_shortcode() {
     ));
 }
 
+
 add_action('wp_ajax_myplugin_get_rating_data_bulk_add', 'bulk_add_ratings_shortcode');
 
 function bulk_delete_ratings_shortcode() {
-    $posts = get_posts(array(
-        'post_type'   => array('post', 'page'),
-        'numberposts' => -1,
-        'post_status' => 'publish'
-    ));
     $success = false;
-    $msg = "";
     $count = 0;
-    
-    foreach ($posts as $post) {
-        // Check if shortcode exists in content
-        if (false !== strpos($post->post_content, '[star_rating]')) {
-            // Remove all instances of the shortcode
-            $updated_content = str_replace('[star_rating]', '', $post->post_content);
-            
-            // Update the post if content changed
-            if ($updated_content !== $post->post_content) {
-                wp_update_post(array(
-                    'ID' => $post->ID,
-                    'post_content' => $updated_content
-                ));
-                $count++;
-                $success = true;
+
+    if (function_exists('icl_object_id')) {
+        // WPML is active: get only parent posts
+        global $wpdb;
+
+        $parents = $wpdb->get_results("
+            SELECT p.ID, p.post_type
+            FROM {$wpdb->posts} p
+            INNER JOIN {$wpdb->prefix}icl_translations t
+                ON p.ID = t.element_id
+            WHERE p.post_status = 'publish'
+              AND p.post_type IN ('post', 'page')
+              AND t.source_language_code IS NULL
+        ");
+
+        foreach ($parents as $parent) {
+            // Get all translations of this parent post
+            $trid = apply_filters('wpml_element_trid', null, $parent->ID, 'post_' . $parent->post_type);
+            $translations = apply_filters('wpml_get_element_translations', null, $trid, 'post_' . $parent->post_type);
+
+            foreach ($translations as $translation) {
+                $translated_post = get_post($translation->element_id);
+                if (!$translated_post) continue;
+
+                if (false !== strpos($translated_post->post_content, '[star_rating]')) {
+                    $updated_content = str_replace('[star_rating]', '', $translated_post->post_content);
+
+                    if ($updated_content !== $translated_post->post_content) {
+                        wp_update_post(array(
+                            'ID' => $translated_post->ID,
+                            'post_content' => $updated_content
+                        ));
+                        $count++;
+                        $success = true;
+                    }
+                }
+            }
+        }
+    } else {
+        // WPML not active: just loop through all posts
+        $posts = get_posts(array(
+            'post_type'   => array('post', 'page'),
+            'numberposts' => -1,
+            'post_status' => 'publish'
+        ));
+
+        foreach ($posts as $post) {
+            if (false !== strpos($post->post_content, '[star_rating]')) {
+                $updated_content = str_replace('[star_rating]', '', $post->post_content);
+
+                if ($updated_content !== $post->post_content) {
+                    wp_update_post(array(
+                        'ID' => $post->ID,
+                        'post_content' => $updated_content
+                    ));
+                    $count++;
+                    $success = true;
+                }
             }
         }
     }
-    
-    if ($success) {
-        $msg = "Removed [star_rating] shortcode from $count posts";
-    } else {
-        $msg = "No posts contained the [star_rating] shortcode"; 
-    }
-    
+
+    $msg = $success
+        ? "Removed [star_rating] shortcode from $count post(s)"
+        : "No posts contained the [star_rating] shortcode";
+
     $json_data = array(
-        "status" => 200,
+        "status"  => 200,
         "success" => $success,
-        "msg" => $msg,
-        "count" => $count
+        "msg"     => $msg,
+        "count"   => $count
     );
-    
+
     wp_send_json($json_data);
 }
+
 add_action('wp_ajax_myplugin_get_rating_data_bulk_delete', 'bulk_delete_ratings_shortcode');
 
 add_action('admin_init', 'my_plugin_settings_init');
@@ -651,38 +743,59 @@ function delete_ratings_shortcode() {
     }
 
     $success = false;
-    $msg = "";
     $count = 0;
-        // Check if shortcode exists in content
-        if (false !== strpos($post->post_content, '[star_rating]')) {
-            // Remove all instances of the shortcode
-            $updated_content = str_replace('[star_rating]', '', $post->post_content);
-            
-            // Update the post if content changed
+
+    if (function_exists('icl_object_id')) {
+        // WPML is active: get all translations (including parent)
+        $trid = apply_filters('wpml_element_trid', null, $post_id, 'post_' . $post->post_type);
+        $translations = apply_filters('wpml_get_element_translations', null, $trid, 'post_' . $post->post_type);
+
+        foreach ($translations as $translation) {
+            $translated_post = get_post($translation->element_id);
+            if (!$translated_post) continue;
+
+            if (false !== strpos($translated_post->post_content, $shortcode)) {
+                $updated_content = str_replace($shortcode, '', $translated_post->post_content);
+
+                if ($updated_content !== $translated_post->post_content) {
+                    wp_update_post(array(
+                        'ID' => $translated_post->ID,
+                        'post_content' => $updated_content
+                    ));
+                    $success = true;
+                    $count++;
+                }
+            }
+        }
+    } else {
+        // WPML not active: remove from only this post
+        if (false !== strpos($post->post_content, $shortcode)) {
+            $updated_content = str_replace($shortcode, '', $post->post_content);
+
             if ($updated_content !== $post->post_content) {
                 wp_update_post(array(
                     'ID' => $post->ID,
                     'post_content' => $updated_content
                 ));
                 $success = true;
+                $count = 1;
             }
         }
-    
-    
-    if ($success) {
-        $msg = "Removed [star_rating] shortcode from  posts";
-    } else {
-        $msg = "No posts contained the [star_rating] shortcode"; 
     }
-    
+
+    $msg = $success 
+        ? "Removed [star_rating] shortcode from $count post(s)." 
+        : "No post contained the [star_rating] shortcode.";
+
     $json_data = array(
         "status" => 200,
         "success" => $success,
         "msg" => $msg,
     );
-    
+
     wp_send_json($json_data);
 }
+
 add_action('wp_ajax_myplugin_get_rating_data_delete', 'delete_ratings_shortcode');
 function my_plugin_field_callback() {
     $option = get_option('my_plugin_option_name');
@@ -906,7 +1019,7 @@ if (function_exists('icl_object_id')) {
         AND t.source_language_code IS NULL";
 } else {
     // WPML is not active: get all posts
-    $sql .= " 
+    $sql .= "
         WHERE p.post_status = 'publish'
         AND p.post_type IN ('post', 'page')";
 }
@@ -934,13 +1047,13 @@ if (function_exists('icl_object_id')) {
 
         }
         $link = get_permalink( $row->ID );
-       $nestedData['title'] .= '<a href="'.$link.'" target="_blanck">
+       $nestedData['title'] .= `<a href="'.$link.'" target="_blanck">
                         <svg width="20px" height="20px" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
                         <defs><style>.a{fill:none;stroke:#000000;stroke-linecap:round;stroke-linejoin:round;}</style>
                     </defs>
                     <path class="a" d="M23.0551,14.2115l6.942-6.9421c2.6788-2.6788,7.5386-2.1623,10.2172.5164s3.1951,7.5384.5163,10.2172L30.4481,28.2856c-2.6788,2.6788-7.5386,2.1623-10.2172-.5163"/>
                     <path class="a" d="M24.9449,33.7885l-6.942,6.9421c-2.6788,2.6788-7.5386,2.1623-10.2172-.5164S4.5906,32.6758,7.2694,29.997L17.5519,19.7144c2.6788-2.6788,7.5386-2.1623,10.2172.5163"/></svg></a>
-                 ';
+                 `;
         
         $data[] = $nestedData;
     }
