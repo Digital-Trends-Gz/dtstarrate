@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DT Star Rating System
  * Description: Adds a star rating to posts with IP and cookie-based voting protection.
- * Version: 1.11
+ * Version: 1.14
  * Author: D.T. Company
  */
 
@@ -33,7 +33,6 @@ register_activation_hook(__FILE__, function () {
         post_id BIGINT(20) NOT NULL,
         rating INT(1) NOT NULL,
         ip_address VARCHAR(45) NOT NULL,
-        post_parent_id BIGINT(20) DEFAULT 0 ,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
         UNIQUE KEY unique_vote (post_id, ip_address)
@@ -223,15 +222,15 @@ add_shortcode('star_rating', function () {
 // AJAX handler
 add_action('wp_ajax_submit_rating', 'submit_star_rating');
 add_action('wp_ajax_nopriv_submit_rating', 'submit_star_rating');
+
 function submit_star_rating() {
     global $wpdb;
-
     $post_id = intval($_POST['post_id']);
     $rating = intval($_POST['rating']);
     $ip = $_SERVER['REMOTE_ADDR'];
     $table = $wpdb->prefix . 'post_ratings';
 
-    // Check if user has already rated
+    // Check if already rated
     $already = $wpdb->get_var($wpdb->prepare(
         "SELECT COUNT(*) FROM $table WHERE post_id = %d AND ip_address = %s",
         $post_id, $ip
@@ -240,34 +239,11 @@ function submit_star_rating() {
     if ($already || isset($_COOKIE["rated_post_$post_id"])) {
         echo 'You have already rated this post.';
     } else {
-        // Set default data
-        $data = [
-            'post_id'    => $post_id,
-            'rating'     => $rating,
+        $wpdb->insert($table, [
+            'post_id' => $post_id,
+            'rating' => $rating,
             'ip_address' => $ip,
-        ];
-
-        // If WPML is active, get and add post_parent_id
-        if (function_exists('wpml_get_element_translations')) {
-            $post = get_post($post_id);
-            if ($post) {
-                $element_type = 'post_' . $post->post_type;
-                $trid = apply_filters('wpml_element_trid', null, $post_id, $element_type);
-
-                if ($trid) {
-                    $translations = apply_filters('wpml_get_element_translations', null, $trid, $element_type);
-                    foreach ($translations as $lang => $translation) {
-                        if ($translation->original === 1) {
-                            $data['post_parent_id'] = $translation->element_id;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        // Insert rating with optional post_parent_id
-        $wpdb->insert($table, $data);
+        ]);
 
         // Set a cookie for 1 year
         setcookie("rated_post_$post_id", '1', time() + 365 * DAY_IN_SECONDS, "/");
@@ -277,7 +253,6 @@ function submit_star_rating() {
 
     wp_die();
 }
-
 add_action('admin_menu', 'dt_star_create_menu');
 
 function dt_star_create_menu() {
@@ -1019,8 +994,7 @@ if (function_exists('icl_object_id')) {
         AND t.source_language_code IS NULL";
 } else {
     // WPML is not active: get all posts
-    $sql .= "
-        WHERE p.post_status = 'publish'
+    $sql .= "WHERE p.post_status = 'publish'
         AND p.post_type IN ('post', 'page')";
 }
             if (!empty($searchQuery)) {
