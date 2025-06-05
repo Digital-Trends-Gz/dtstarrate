@@ -154,15 +154,13 @@ jQuery(document).ready(function($) {
         focusConfirm: false,
     }).then(function (e) {
             if (e.isConfirmed) {
-            if (e.isConfirmed && e.value) {
-                const position = e.value;
+            if (e.isConfirmed) {
       $.ajax({
             url: ajaxurl +'?action=myplugin_get_rating_data_delete',
             type: 'POST',
          data: {
             post_id: postId,
             shortcode: shortcode,
-            position: position
             },
             success: function(response) {
                  if (response.success == false){
