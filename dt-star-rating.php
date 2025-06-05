@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DT Star Rating System
  * Description: Adds a star rating to posts with IP and cookie-based voting protection.
- * Version: 1.14
+ * Version: 1.15
  * Author: D.T. Company
  */
 
@@ -33,6 +33,7 @@ register_activation_hook(__FILE__, function () {
         post_id BIGINT(20) NOT NULL,
         rating INT(1) NOT NULL,
         ip_address VARCHAR(45) NOT NULL,
+        post_parent_id BIGINT(20) DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
         UNIQUE KEY unique_vote (post_id, ip_address)
@@ -92,75 +93,93 @@ add_action('admin_enqueue_scripts', 'my_enqueue_bootstrap_admin_only');
 
 // Shortcode to show star rating
 add_shortcode('star_rating', function () {
-    // we delete becouse abo ahmad want to show in page
-    // if (!is_singular('post')) return '';
-
     global $post, $wpdb;
     $post_id = $post->ID;
     $ip = $_SERVER['REMOTE_ADDR'];
     $table = $wpdb->prefix . 'post_ratings';
-    // Check cookie/IP
-    $already_rated = isset($_COOKIE["rated_post_$post_id"]) || 
-        $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $table WHERE post_id = %d AND ip_address = %s", $post_id, $ip));
+
+    // Default: use only this post_id
+    $target_ids = [$post_id];
+
+    // Check for WPML and parent grouping logic
+    if (function_exists('icl_object_id')) {
+        $post_parent_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT post_parent_id FROM $table WHERE post_id = %d LIMIT 1", $post_id
+        ));
+        if (!empty($post_parent_id) && $post_parent_id != 0) {
+            $related_ids = $wpdb->get_col($wpdb->prepare(
+                "SELECT post_id FROM $table WHERE post_parent_id = %d", $post_parent_id
+            ));
+            if (!empty($related_ids)) {
+                $target_ids = $related_ids;
+            }
+        }
+    }
+
+    // Query safe placeholders
+    $placeholders = implode(',', array_fill(0, count($target_ids), '%d'));
+    // Check if already rated by IP or cookie
+    $already_rated = isset($_COOKIE["rated_post_$post_id"]) || $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM $table WHERE post_id IN ($placeholders) AND ip_address = %s",
+        [...$target_ids, $ip]
+    ));
+
+    // Google snippet options
     $google_snippet = get_option('dt_star_rating_setting');
     $google_enabled = $google_snippet["dt_google"];
     $types = $google_snippet["types"];
+
     // Get all ratings
     $ratings = $wpdb->get_results($wpdb->prepare(
-        "SELECT rating, COUNT(*) as count FROM $table WHERE post_id = %d GROUP BY rating",
-        $post_id
+        "SELECT rating, COUNT(*) as count FROM $table WHERE post_id IN ($placeholders) GROUP BY rating",
+        $target_ids
     ), OBJECT_K);
 
     $total_votes = array_sum(wp_list_pluck($ratings, 'count'));
     $avg = $total_votes ? round(array_sum(array_map(fn($r) => $r->rating * $r->count, $ratings)) / $total_votes, 1) : 0;
 
-    $plugin_url = plugin_dir_url( __FILE__ );
-    $star_single = $plugin_url."assets/images/star_single.svg";
+    $plugin_url = plugin_dir_url(__FILE__);
+    $star_single = $plugin_url . "assets/images/star_single.svg";
     $app_name = get_bloginfo('name');
+
     ob_start(); ?>
     <div class="rated">
         <div class="rated__wrapper">
             <div class="rated__items">
-                <!-- Average rating -->
                 <div class="rated-reviews">
                     <span class="rated-reviews__counter test" id="js-ratingValue"><?php echo $avg; ?></span>
                     <?php
                     $avg = number_format((float)$avg, 1);
-                    $rounded_avg = number_format((floor($avg * 2) / 2), 1); // e.g. 4.3 → 4.0, 4.6 → 4.5
+                    $rounded_avg = number_format((floor($avg * 2) / 2), 1);
                     $rating_img = $plugin_url . 'assets/images/stars_' . str_replace('.', '_', $rounded_avg) . '.svg';
                     ?>
                     <img class="rated-reviews__star" src="<?php echo esc_url($rating_img); ?>" width="136" height="25" alt="<?php echo esc_attr($avg); ?> stars">
-                    <p class="rated-reviews__count">
-                        Average rating based on <?php echo $total_votes; ?> reviews
-                    </p>
+                    <p class="rated-reviews__count">Average rating based on <?php echo $total_votes; ?> reviews</p>
                 </div>
 
-                <!-- Star breakdown -->
                 <div class="rated-reviews">
                     <div class="rated-reviews__ratings">
                         <?php for ($i = 5; $i >= 1; $i--):
                             $count = $ratings[$i]->count ?? 0;
                             $percent = $total_votes ? round(($count / $total_votes) * 100) : 2;
-                            if($percent == 0) $percent = 2;
-                            // $colors = ['red','orange','yellow','lime','green'];
-                            $colors = ['green','lime','yellow','orange','red'];
+                            if ($percent == 0) $percent = 2;
+                            $colors = ['green', 'lime', 'yellow', 'orange', 'red'];
                             $color = $colors[5 - $i];
-                        ?>
-                        <div class="rated-reviews__rating">
-                            <div class="rated-reviews__number">
-                                <span><?php echo $i; ?></span>
-                                <img src="<?php echo $star_single; ?>" width="15" height="15" alt="star">
+                            ?>
+                            <div class="rated-reviews__rating">
+                                <div class="rated-reviews__number">
+                                    <span><?php echo $i; ?></span>
+                                    <img src="<?php echo $star_single; ?>" width="15" height="15" alt="star">
+                                </div>
+                                <div class="rated-reviews__progressbar animate">
+                                    <div class="bar bar--color-<?php echo $color; ?>" style="width: <?php echo $percent; ?>% !important"></div>
+                                </div>
+                                <div class="rated-reviews__amount"><?php echo $count; ?></div>
                             </div>
-                            <div class="rated-reviews__progressbar animate">
-                                <div class="bar bar--color-<?php echo $color; ?>" style="width: <?php echo $percent; ?>% !important"></div>
-                            </div>
-                            <div class="rated-reviews__amount"><?php echo $count; ?></div>
-                        </div>
                         <?php endfor; ?>
                     </div>
                 </div>
 
-                <!-- Rating submission -->
                 <div class="rated-reviews">
                     <span class="rated-reviews__counter2" id="js-ratingValue2"><?php echo $already_rated ? 'Thank you!' : 'Rate Us'; ?></span>
                     <div id="star-rating" data-postid="<?php echo $post_id; ?>" data-rated="<?php echo $already_rated ? '1' : '0'; ?>">
@@ -173,51 +192,51 @@ add_shortcode('star_rating', function () {
             </div>
         </div>
     </div>
-<?php if ($google_enabled && !empty($types)): ?>
-  <?php foreach ($types as $type): ?>
-    <script type="application/ld+json">
-  {
-        "@type": "<?php echo esc_js($type); ?>",
-           "name": "<?php echo esc_js($app_name); ?>",
-        "alternateName": [
-          "Instagram downloader",
-          "<?php echo esc_js($app_name); ?>",
-          "<?php echo esc_js($app_name); ?> APP",
-          "<?php echo esc_js($app_name); ?>.com"
-        ],
-        "url": "<?php echo get_site_url();?>",
-        "image": "<?php echo get_theme_mod('custom_logo'); ?>",
-        "operatingSystem": "Windows, Linux, iOS, Android, OSX, macOS",
-        "applicationCategory": "UtilitiesApplication",
-        "featureList": [
-          "HD Profile downloader"
-          "Photo downloader",
-          "Video Downloader",
-          "Reel Downloader",
-          "IGTV Downloader",
-          "Gallery Downloader",
-          "Story Downloader",
-          "Highlights Downloader"
-        ],
-        "contentRating": "Everyone",
-        "aggregateRating": {
-          "@type": "AggregateRating",
-        "ratingValue": "<?php echo esc_js($avg); ?>",
-        "reviewCount": "<?php echo esc_js($total_votes); ?>"
-        },
-        "offers": {
-          "@type": "Offer",
-          "price": "0"
-        }
-      }
-    </script>
-  <?php endforeach; ?>
 
+    <?php if ($google_enabled && !empty($types)): ?>
+        <?php foreach ($types as $type): ?>
+            <script type="application/ld+json">
+            {
+                "@type": "<?php echo esc_js($type); ?>",
+                "name": "<?php echo esc_js($app_name); ?>",
+                "alternateName": [
+                    "Instagram downloader",
+                    "<?php echo esc_js($app_name); ?>",
+                    "<?php echo esc_js($app_name); ?> APP",
+                    "<?php echo esc_js($app_name); ?>.com"
+                ],
+                "url": "<?php echo get_site_url(); ?>",
+                "image": "<?php echo get_theme_mod('custom_logo'); ?>",
+                "operatingSystem": "Windows, Linux, iOS, Android, OSX, macOS",
+                "applicationCategory": "UtilitiesApplication",
+                "featureList": [
+                    "HD Profile downloader",
+                    "Photo downloader",
+                    "Video Downloader",
+                    "Reel Downloader",
+                    "IGTV Downloader",
+                    "Gallery Downloader",
+                    "Story Downloader",
+                    "Highlights Downloader"
+                ],
+                "contentRating": "Everyone",
+                "aggregateRating": {
+                    "@type": "AggregateRating",
+                    "ratingValue": "<?php echo esc_js($avg); ?>",
+                    "reviewCount": "<?php echo esc_js($total_votes); ?>"
+                },
+                "offers": {
+                    "@type": "Offer",
+                    "price": "0"
+                }
+            }
+            </script>
+        <?php endforeach; ?>
+    <?php endif; ?>
 
-
-<?php endif; ?>
     <?php return ob_get_clean();
 });
+
 
 // AJAX handler
 add_action('wp_ajax_submit_rating', 'submit_star_rating');
@@ -225,12 +244,13 @@ add_action('wp_ajax_nopriv_submit_rating', 'submit_star_rating');
 
 function submit_star_rating() {
     global $wpdb;
+
     $post_id = intval($_POST['post_id']);
     $rating = intval($_POST['rating']);
     $ip = $_SERVER['REMOTE_ADDR'];
     $table = $wpdb->prefix . 'post_ratings';
 
-    // Check if already rated
+    // Check if user has already rated
     $already = $wpdb->get_var($wpdb->prepare(
         "SELECT COUNT(*) FROM $table WHERE post_id = %d AND ip_address = %s",
         $post_id, $ip
@@ -239,11 +259,37 @@ function submit_star_rating() {
     if ($already || isset($_COOKIE["rated_post_$post_id"])) {
         echo 'You have already rated this post.';
     } else {
-        $wpdb->insert($table, [
-            'post_id' => $post_id,
-            'rating' => $rating,
+        // Set default data
+        $data = [
+            'post_id'    => $post_id,
+            'rating'     => $rating,
             'ip_address' => $ip,
-        ]);
+        ];
+
+        // If WPML is active, get and add post_parent_id
+      if (function_exists('icl_object_id')) {
+        $post = get_post($post_id);
+        if ($post) {
+            $element_type = 'post_' . $post->post_type;
+            $trid = apply_filters('wpml_element_trid', null, $post_id, $element_type);
+
+
+            if ($trid) {
+                $translations = apply_filters('wpml_get_element_translations', null, $trid, $element_type);
+
+                foreach ($translations as $lang => $translation) {
+                    if (!empty($translation->original)) {
+                        $data['post_parent_id'] = $translation->element_id;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+
+        // Insert rating with optional post_parent_id
+        $wpdb->insert($table, $data);
 
         // Set a cookie for 1 year
         setcookie("rated_post_$post_id", '1', time() + 365 * DAY_IN_SECONDS, "/");
@@ -253,6 +299,7 @@ function submit_star_rating() {
 
     wp_die();
 }
+
 add_action('admin_menu', 'dt_star_create_menu');
 
 function dt_star_create_menu() {
@@ -933,118 +980,126 @@ add_action('wp_ajax_dt_rate_specific_post_add', 'add_short_code_for_post');
 add_action('wp_ajax_dt_rate_specific_post', 'dt_rate_specific_post_table');
 
 function dt_rate_specific_post_table() {
-    global $wpdb;
-    header("Content-Type: application/json");
-    
-    $request = $_GET;
-    $table = $wpdb->prefix . 'post_ratings';
-    $post_table =$wpdb->posts;
-    
-    // Define columns for sorting
-    $columns = array(
-        array('db' => 'ID', 'dt' => 0),
-        array('db' => 'post_title', 'dt' => 1),
-      
-    );
-    
-    // Pagination
-    $limit = intval($request['length']) ;
-    $offset = intval($request['start']) ;
- 
-    
-    // Search
-    $searchValue = $request['search']['value'];
-    $searchQuery = "";
-    
-    if (!empty($searchValue)) {
-        $searchQuery = " HAVING post_title LIKE '%" . esc_sql($searchValue) . "%' OR 
-                        ID LIKE '%" . esc_sql($searchValue) . "%'";
-    }
-    $limit_query = "";
-    if ( isset($request['start']) && isset($request['length']) ) {
-        $offset = intval($request['start']);
-        $limit_query = "LIMIT $offset, " . intval($request['length']);
-    }
-    // Total records count
-    $totalData = $wpdb->get_var("SELECT COUNT(DISTINCT ID) FROM $table");
-    
-    // Ordering
-    $order_by = "";
-    if (isset($request['order']) && !empty($request['order'])) {
-        
-        $order_column = $request['order'][0]['column'];
-        $order_direction = $request['order'][0]['dir'];
-        $order_by = " ORDER BY " . $columns[$order_column]['db'] . " " . $order_direction;
-    }
-    
-$sql = "SELECT 
-            p.ID, 
-            p.post_title,
-            p.post_content    
-        FROM $post_table p";
+    try {
+        global $wpdb;
+        header("Content-Type: application/json");
 
-if (function_exists('icl_object_id')) {
-    // WPML is active: only get original posts
-    $sql .= " 
-        JOIN {$wpdb->prefix}icl_translations t 
-        ON p.ID = t.element_id 
-        WHERE p.post_status = 'publish'
-        AND p.post_type IN ('post', 'page')
-        AND t.element_type IN ('post_post', 'post_page')
-        AND t.source_language_code IS NULL";
-} else {
-    // WPML is not active: get all posts
-    $sql .= "WHERE p.post_status = 'publish'
-        AND p.post_type IN ('post', 'page')";
-}
-            if (!empty($searchQuery)) {
-            $sql .= $searchQuery;
-        }
-            if (!empty($order_by)) {
-            $sql .= " " . $order_by;
-        }
-   $sql .= " LIMIT $offset, $limit";
-   $results = $wpdb->get_results($sql);
-    // Prepare data
-    $data = array();
-    $i = $offset + 1;
-    foreach ($results as $row) {
-        $nestedData = array();
-        $nestedData['ID'] = $row->ID;
-        $nestedData['title'] = $row->post_title ? $row->post_title : '(No title)';
-        $has_shortcode = has_shortcode($row->post_content, 'star_rating'); 
-        if ($has_shortcode) {
-            $nestedData['action'] = '<button class="add_post_setting delete_button delete_short_code" data-id="'.$row->ID.'">Delete Short Code</button>';
+        $request = $_GET;
+        $table = $wpdb->prefix . 'post_ratings';
+        $post_table = $wpdb->posts;
 
-        } else{
-          $nestedData['action'] = '<button class="add_post_setting add_short_code" data-id="'.$row->ID.'" >Add Short Code</button>';
+        // Define columns for sorting
+        $columns = array(
+            array('db' => 'ID', 'dt' => 0),
+            array('db' => 'post_title', 'dt' => 1),
+        );
 
+        // Pagination
+        $limit = isset($request['length']) ? intval($request['length']) : 10;
+        $offset = isset($request['start']) ? intval($request['start']) : 0;
+
+        // Search
+        $searchValue = isset($request['search']['value']) ? sanitize_text_field($request['search']['value']) : '';
+        $searchQuery = "";
+        $searchBindings = array();
+
+        if (!empty($searchValue)) {
+            $searchQuery = " AND (p.post_title LIKE %s OR p.ID LIKE %s)";
+            $searchBindings[] = '%' . $searchValue . '%';
+            $searchBindings[] = '%' . $searchValue . '%';
         }
-        $link = get_permalink( $row->ID );
-       $nestedData['title'] .= `<a href="'.$link.'" target="_blanck">
-                        <svg width="20px" height="20px" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                        <defs><style>.a{fill:none;stroke:#000000;stroke-linecap:round;stroke-linejoin:round;}</style>
-                    </defs>
+
+        // Ordering
+        $order_by = "";
+        if (isset($request['order'][0]['column']) && isset($request['order'][0]['dir'])) {
+            $order_column = intval($request['order'][0]['column']);
+            $order_direction = in_array(strtoupper($request['order'][0]['dir']), ['ASC', 'DESC']) ? strtoupper($request['order'][0]['dir']) : 'ASC';
+            if (isset($columns[$order_column])) {
+                $order_by = " ORDER BY p." . esc_sql($columns[$order_column]['db']) . " " . $order_direction;
+            }
+        }
+
+        // Base query
+        $sql = "SELECT p.ID, p.post_title, p.post_content
+                FROM $post_table p";
+
+        if (function_exists('icl_object_id')) {
+            // WPML active
+            $sql .= " 
+                JOIN {$wpdb->prefix}icl_translations t 
+                ON p.ID = t.element_id 
+                WHERE p.post_status = 'publish'
+                AND p.post_type IN ('post', 'page')
+                AND t.element_type IN ('post_post', 'post_page')
+                AND t.source_language_code IS NULL";
+        } else {
+            // WPML not active
+            $sql .= "
+                WHERE p.post_status = 'publish'
+                AND p.post_type IN ('post', 'page')";
+        }
+
+        // Add search clause
+        if (!empty($searchQuery)) {
+            $sql .= $wpdb->prepare($searchQuery, ...$searchBindings);
+        }
+
+        // Total count before pagination
+        $count_sql = "SELECT COUNT(*) FROM ($sql) AS temp_table";
+        $totalFiltered = $wpdb->get_var($count_sql);
+
+        // Add ordering and limit
+        $sql .= $order_by;
+        $sql .= " LIMIT %d OFFSET %d";
+        $prepared_sql = $wpdb->prepare($sql, $limit, $offset);
+
+        // Get results
+        $results = $wpdb->get_results($prepared_sql);
+
+        // Total records count
+        $totalData = $wpdb->get_var("SELECT COUNT(*) FROM $post_table WHERE post_status = 'publish' AND post_type IN ('post', 'page')");
+
+        // Prepare data for JSON
+        $data = array();
+        foreach ($results as $row) {
+            $nestedData = array();
+            $nestedData['ID'] = $row->ID;
+            $nestedData['title'] = $row->post_title ? esc_html($row->post_title) : '(No title)';
+
+            $has_shortcode = has_shortcode($row->post_content, 'star_rating');
+            if ($has_shortcode) {
+                $nestedData['action'] = '<button class="add_post_setting delete_button delete_short_code" data-id="' . esc_attr($row->ID) . '">Delete Short Code</button>';
+            } else {
+                $nestedData['action'] = '<button class="add_post_setting add_short_code" data-id="' . esc_attr($row->ID) . '">Add Short Code</button>';
+            }
+
+            $link = esc_url(get_permalink($row->ID));
+            $nestedData['title'] .= ' <a href="' . $link . '" target="_blank">
+                <svg width="20px" height="20px" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                    <defs><style>.a{fill:none;stroke:#000000;stroke-linecap:round;stroke-linejoin:round;}</style></defs>
                     <path class="a" d="M23.0551,14.2115l6.942-6.9421c2.6788-2.6788,7.5386-2.1623,10.2172.5164s3.1951,7.5384.5163,10.2172L30.4481,28.2856c-2.6788,2.6788-7.5386,2.1623-10.2172-.5163"/>
-                    <path class="a" d="M24.9449,33.7885l-6.942,6.9421c-2.6788,2.6788-7.5386,2.1623-10.2172-.5164S4.5906,32.6758,7.2694,29.997L17.5519,19.7144c2.6788-2.6788,7.5386-2.1623,10.2172.5163"/></svg></a>
-                 `;
-        
-        $data[] = $nestedData;
+                    <path class="a" d="M24.9449,33.7885l-6.942,6.9421c-2.6788,2.6788-7.5386,2.1623-10.2172-.5164S4.5906,32.6758,7.2694,29.997L17.5519,19.7144c2.6788-2.6788,7.5386-2.1623,10.2172.5163"/>
+                </svg>
+            </a>';
+
+            $data[] = $nestedData;
+        }
+
+        // JSON response
+        $json_data = array(
+            "draw" => isset($request['draw']) ? intval($request['draw']) : 0,
+            "iTotalRecords" => intval($totalData),
+            "iTotalDisplayRecords" => intval($totalFiltered),
+            "aaData" => $data
+        );
+
+        wp_send_json($json_data);
+
+    } catch (Exception $ex) {
+        wp_send_json_error(array("error" => $ex->getMessage()));
     }
-    
-    // Filtered count (same as total in this case unless searching)
-    $filterDataCount = !empty($searchValue) ? $wpdb->get_var("SELECT COUNT(*) FROM ($sql) as filtered") : $totalData;
-    
-    // JSON response
-    $json_data = array(
-        "draw" => intval($request['draw']),
-        "iTotalRecords" => intval($totalData),
-        "iTotalDisplayRecords" => intval($filterDataCount),
-        "aaData" => $data
-    );
-    
-    wp_send_json($json_data);
 }
+
 
 // Add this to your theme's functions.php or a custom plugin
 
