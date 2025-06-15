@@ -100,7 +100,7 @@ add_shortcode('star_rating', function () {
 
     // Default: use only this post_id
     $target_ids = [$post_id];
-
+    $current_language = "";
     // Check for WPML and parent grouping logic
     if (function_exists('icl_object_id')) {
         $post_parent_id = $wpdb->get_var($wpdb->prepare(
@@ -113,6 +113,7 @@ add_shortcode('star_rating', function () {
             if (!empty($related_ids)) {
                 $target_ids = $related_ids;
             }
+              $current_language = apply_filters('wpml_current_language', null);
         }
     }
 
@@ -217,7 +218,10 @@ add_shortcode('star_rating', function () {
     "<?php echo esc_js($app_name); ?> APP",
     "<?php echo esc_js($app_name); ?>.com"
   ],
-  "url": "<?php echo get_site_url(); ?>",
+    "url": "<?php echo  get_current_url(); ?>",
+     <?php if ($lang != '') : ?>
+      "inLanguage": <?php echo current_language; ?>
+      <?php endif; ?>
   "image": "<?php echo get_theme_mod('custom_logo'); ?>",
   "operatingSystem": "Windows, Linux, iOS, Android, OSX, macOS",
   "applicationCategory": "UtilitiesApplication",
@@ -1250,3 +1254,27 @@ function dt_star_rating_create_default_settings() {
 }
 add_action('wp_ajax_dt_star_rating_create_default_settings','dt_star_rating_create_default_settings');
 
+function update_post_ratings_table_structure() {
+ global $wpdb;
+    $table = $wpdb->prefix . 'post_ratings';
+
+    // Check first to avoid “duplicate key” errors
+    $has_index = $wpdb->get_var( "
+        SHOW INDEX FROM {$table}
+        WHERE Key_name = 'post_parent_id'
+    " );
+
+    if ( ! $has_index ) {
+        $wpdb->query( "
+            ALTER TABLE {$table}
+            ADD INDEX post_parent_id (post_parent_id)
+        " );
+    }
+}
+function get_current_url() {
+    $protocol = is_ssl() ? 'https://' : 'http://';
+    $host     = $_SERVER['HTTP_HOST'];
+    $request  = $_SERVER['REQUEST_URI'];
+
+    return $protocol . $host . $request;
+}
