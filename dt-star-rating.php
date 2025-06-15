@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DT Star Rating System
  * Description: Adds a star rating to posts with IP and cookie-based voting protection.
- * Version: 1.26
+ * Version: 1.27
  * Author: D.T. Company
  */
 
@@ -209,6 +209,10 @@ add_shortcode('star_rating', function () {
     </div>
 
     <?php if ($google_enabled && !empty($types)): ?>
+        <?php
+            $custom_logo_id = get_theme_mod('custom_logo');
+            $logo_url = wp_get_attachment_image_url($custom_logo_id, 'full');
+            ?>
         <?php foreach ($types as $type):
             if (intval($total_votes) == 0 && floatval($avg) == 0.0) {
                 $avg = 4.5;
@@ -230,7 +234,7 @@ add_shortcode('star_rating', function () {
               <?php if (!empty($current_language)): ?>
               "inLanguage": "<?php echo esc_js($current_language); ?>",
               <?php endif; ?>
-              "image": "<?php echo esc_url(get_theme_mod('custom_logo')); ?>",
+              "image": "<?php echo esc_url($logo_url); ?>",
               "operatingSystem": "Windows, Linux, iOS, Android, OSX, macOS",
               "applicationCategory": "UtilitiesApplication",
               "featureList": [
