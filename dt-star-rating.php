@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DT Star Rating System
  * Description: Adds a star rating to posts with IP and cookie-based voting protection.
- * Version: 1.30
+ * Version: 1.31
  * Author: D.T. Company
  */
 
@@ -197,7 +197,7 @@ add_shortcode('star_rating', function () {
 
                 <div class="rated-reviews">
                     <span class="rated-reviews__counter2 " id="js-ratingValue2"><?php echo $already_rated ? 'Thank you!' : 'Rate Us'; ?></span>
-                    <div id="star-rating" class="<?php echo $already_rated ?'star_rated' : "" ?>" data-postid="<?php echo $post_id; ?>" data-rated="<?php echo $already_rated ? '1' : '0'; ?>">
+                    <div id="star-rating"  data-postid="<?php echo $post_id; ?>" data-rated="<?php echo $already_rated ? '1' : '0'; ?>">
                         <?php for ($i = 1; $i <= 5; $i++): ?>
                             <span class="star" data-value="<?php echo $i; ?>">&#9733;</span>
                         <?php endfor; ?>
