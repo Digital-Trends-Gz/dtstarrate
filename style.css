@@ -423,8 +423,8 @@
     font-size: 22px;
     line-height: 56px;
     color: #202630;
-    text-align: right;
-    width: 118px;
+    text-align: center;
+    width: 100%;
     /* color: #fff; */
 }
 

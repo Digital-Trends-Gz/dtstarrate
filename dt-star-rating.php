@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DT Star Rating System
  * Description: Adds a star rating to posts with IP and cookie-based voting protection.
- * Version: 1.28
+ * Version: 1.29
  * Author: D.T. Company
  */
 
@@ -45,7 +45,7 @@ register_activation_hook(__FILE__, function () {
 
 // Enqueue scripts and styles
 add_action('wp_enqueue_scripts', function () {
-    wp_enqueue_style('star-rating-style', plugin_dir_url(__FILE__) . 'style.css', array(), '1.0.5');
+    wp_enqueue_style('star-rating-style', plugin_dir_url(__FILE__) . 'style.css', array(), '1.0.6');
     wp_enqueue_script('star-rating-script', plugin_dir_url(__FILE__) . 'rating.js', ['jquery'], '1.5.7', true);
     wp_localize_script('star-rating-script', 'starRatingAjax', [
         'ajaxurl' => admin_url('admin-ajax.php'),
