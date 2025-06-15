@@ -60,8 +60,9 @@ const allstars = document.querySelectorAll('.star');
 
 allstars.forEach((star, index) => {
   star.addEventListener('mouseenter', () => {
-    for (let i = index; i < allstars.length; i--) {
-          if(allstars[i].classList.contains('hovered')){
+   for (let i = index; i >= 0; i--) {
+        var containe_hoverd = allstars[i].classList.contains('hovered');
+          if(containe_hoverd == true){
             continue;
          
 
@@ -73,9 +74,9 @@ allstars.forEach((star, index) => {
   });
 
   star.addEventListener('mouseleave', () => {
-    for (let i = index; i < allstars.length; i--) {
-
-        if(allstars[i].classList.contains('hovered')){
+   for (let i = index; i >= 0; i--) {
+ var containe_hoverd = allstars[i].classList.contains('hovered');
+        if(containe_hoverd == true){
         allstars[i].classList.remove('hovered');
 
         }else{

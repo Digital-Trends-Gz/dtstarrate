@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DT Star Rating System
  * Description: Adds a star rating to posts with IP and cookie-based voting protection.
- * Version: 1.17
+ * Version: 1.18
  * Author: D.T. Company
  */
 
@@ -126,6 +126,7 @@ add_shortcode('star_rating', function () {
 
     // Google snippet options
     $google_snippet = get_option('dt_star_rating_setting');
+    $google_enabled = "";
     if($google_snippet){
    $google_enabled = $google_snippet["dt_google"];
     $types = $google_snippet["types"];
