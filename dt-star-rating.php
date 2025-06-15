@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DT Star Rating System
  * Description: Adds a star rating to posts with IP and cookie-based voting protection.
- * Version: 1.25
+ * Version: 1.26
  * Author: D.T. Company
  */
 
@@ -92,6 +92,8 @@ function my_enqueue_bootstrap_admin_only($hook) {
 add_action('admin_enqueue_scripts', 'my_enqueue_bootstrap_admin_only');
 
 // Shortcode to show star rating
+
+// Shortcode to show star rating
 add_shortcode('star_rating', function () {
     global $post, $wpdb;
     $post_id = $post->ID;
@@ -100,26 +102,33 @@ add_shortcode('star_rating', function () {
 
     // Default: use only this post_id
     $target_ids = [$post_id];
-    $current_language = "";
+    $current_language = '';
+
     // Check for WPML and parent grouping logic
     if (function_exists('icl_object_id')) {
         $post_parent_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT post_parent_id FROM $table WHERE post_id = %d LIMIT 1", $post_id
+            "SELECT post_parent_id FROM $table WHERE post_id = %d LIMIT 1",
+            $post_id
         ));
+
         if (!empty($post_parent_id) && $post_parent_id != 0) {
             $related_ids = $wpdb->get_col($wpdb->prepare(
-                "SELECT post_id FROM $table WHERE post_parent_id = %d", $post_parent_id
+                "SELECT post_id FROM $table WHERE post_parent_id = %d",
+                $post_parent_id
             ));
             if (!empty($related_ids)) {
                 $target_ids = $related_ids;
             }
-              $current_language = apply_filters('wpml_current_language', null);
         }
+
+        // Get current language via WPML
+        $current_language = apply_filters('wpml_current_language', null);
     }
 
     // Query safe placeholders
     $placeholders = implode(',', array_fill(0, count($target_ids), '%d'));
-    // Check if already rated by IP or cookie
+
+    // Check if already rated
     $already_rated = isset($_COOKIE["rated_post_$post_id"]) || $wpdb->get_var($wpdb->prepare(
         "SELECT COUNT(*) FROM $table WHERE post_id IN ($placeholders) AND ip_address = %s",
         [...$target_ids, $ip]
@@ -127,12 +136,13 @@ add_shortcode('star_rating', function () {
 
     // Google snippet options
     $google_snippet = get_option('dt_star_rating_setting');
-    $google_enabled = "";
-    if($google_snippet){
-   $google_enabled = $google_snippet["dt_google"];
-    $types = $google_snippet["types"];
+    $google_enabled = '';
+    $types = [];
+
+    if ($google_snippet) {
+        $google_enabled = $google_snippet['dt_google'] ?? '';
+        $types = $google_snippet['types'] ?? [];
     }
- 
 
     // Get all ratings
     $ratings = $wpdb->get_results($wpdb->prepare(
@@ -144,10 +154,10 @@ add_shortcode('star_rating', function () {
     $avg = $total_votes ? round(array_sum(array_map(fn($r) => $r->rating * $r->count, $ratings)) / $total_votes, 1) : 0;
 
     $plugin_url = plugin_dir_url(__FILE__);
-    $star_single = $plugin_url . "assets/images/star_single.svg";
+    $star_single = $plugin_url . 'assets/images/star_single.svg';
     $app_name = get_bloginfo('name');
-
-    ob_start(); ?>
+    ob_start();
+    ?>
     <div class="rated">
         <div class="rated__wrapper">
             <div class="rated__items">
@@ -200,62 +210,58 @@ add_shortcode('star_rating', function () {
 
     <?php if ($google_enabled && !empty($types)): ?>
         <?php foreach ($types as $type):
-        if( intval($total_votes) == 0 && intval($avg) == 0.0){
-            $avg = 4.5;
-            $total_votes = 10;
-        }
-            
+            if (intval($total_votes) == 0 && floatval($avg) == 0.0) {
+                $avg = 4.5;
+                $total_votes = 10;
+            }
             ?>
-            
- <script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "<?php echo esc_js($type); ?>",
-  "name": "<?php echo esc_js($app_name); ?>",
-  "alternateName": [
-    "Instagram downloader",
-    "<?php echo esc_js($app_name); ?>",
-    "<?php echo esc_js($app_name); ?> APP",
-    "<?php echo esc_js($app_name); ?>.com"
-  ],
-    "url": "<?php echo  get_current_url(); ?>",
-    <?php if ($current_language != "") : ?>
-    "inLanguage": "<?php echo esc_js($current_language); ?>",
-    <?php endif; ?>
-  "image": "<?php echo get_theme_mod('custom_logo'); ?>",
-  "operatingSystem": "Windows, Linux, iOS, Android, OSX, macOS",
-  "applicationCategory": "UtilitiesApplication",
-  "featureList": [
-    "HD Profile downloader",
-    "Photo downloader",
-    "Video Downloader",
-    "Reel Downloader",
-    "IGTV Downloader",
-    "Gallery Downloader",
-    "Story Downloader",
-    "Highlights Downloader"
-  ],
-  "contentRating": "Everyone",
-  "aggregateRating": {
-    "@type": "AggregateRating",
-    "ratingValue": "<?php echo esc_js($avg); ?>",
-    "reviewCount": "<?php echo esc_js($total_votes); ?>"
-  },
-  "offers": {
-    "@type": "Offer",
-     "priceCurrency": "USD",
-     "price": "0"
-  }
-}
-</script>
-
-    </script>
+            <script type="application/ld+json">
+            {
+              "@context": "https://schema.org",
+              "@type": "<?php echo esc_js($type); ?>",
+              "name": "<?php echo esc_js($app_name); ?>",
+              "alternateName": [
+                "Instagram downloader",
+                "<?php echo esc_js($app_name); ?>",
+                "<?php echo esc_js($app_name); ?> APP",
+                "<?php echo esc_js($app_name); ?>.com"
+              ],
+              "url": "<?php echo esc_url(get_permalink()); ?>",
+              <?php if (!empty($current_language)): ?>
+              "inLanguage": "<?php echo esc_js($current_language); ?>",
+              <?php endif; ?>
+              "image": "<?php echo esc_url(get_theme_mod('custom_logo')); ?>",
+              "operatingSystem": "Windows, Linux, iOS, Android, OSX, macOS",
+              "applicationCategory": "UtilitiesApplication",
+              "featureList": [
+                "HD Profile downloader",
+                "Photo downloader",
+                "Video Downloader",
+                "Reel Downloader",
+                "IGTV Downloader",
+                "Gallery Downloader",
+                "Story Downloader",
+                "Highlights Downloader"
+              ],
+              "contentRating": "Everyone",
+              "aggregateRating": {
+                "@type": "AggregateRating",
+                "ratingValue": "<?php echo esc_js($avg); ?>",
+                "reviewCount": "<?php echo esc_js($total_votes); ?>"
+              },
+              "offers": {
+                "@type": "Offer",
+                "priceCurrency": "USD",
+                "price": "0"
+              }
+            }
+            </script>
         <?php endforeach; ?>
     <?php endif; ?>
 
-    <?php return ob_get_clean();
+    <?php
+    return ob_get_clean();
 });
-
 
 // AJAX handler
 add_action('wp_ajax_submit_rating', 'submit_star_rating');
