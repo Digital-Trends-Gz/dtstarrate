@@ -114,6 +114,9 @@
 	text-align: center;
 	gap: 8px
 }
+.rated-reviews:nth-child(3){
+	justify-content: center;
+}
 
 @media (max-width: 991px) {
 	.rated-reviews:nth-child(1) {
@@ -147,6 +150,9 @@
 		/* margin-top: 16px; */
 		background-color: #fff;
 	}
+	.rated-reviews:nth-child(3){
+	justify-content: center;
+}
 }
 
 .rated-reviews:nth-child(3) img {
@@ -424,4 +430,7 @@
 
 .rated__wrapper {
     padding: 20px 14px;
+}
+.star_rated{
+	display: none;
 }

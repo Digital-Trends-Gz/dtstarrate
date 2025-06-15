@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DT Star Rating System
  * Description: Adds a star rating to posts with IP and cookie-based voting protection.
- * Version: 1.27
+ * Version: 1.28
  * Author: D.T. Company
  */
 
@@ -45,7 +45,7 @@ register_activation_hook(__FILE__, function () {
 
 // Enqueue scripts and styles
 add_action('wp_enqueue_scripts', function () {
-    wp_enqueue_style('star-rating-style', plugin_dir_url(__FILE__) . 'style.css', array(), '1.0.3');
+    wp_enqueue_style('star-rating-style', plugin_dir_url(__FILE__) . 'style.css', array(), '1.0.5');
     wp_enqueue_script('star-rating-script', plugin_dir_url(__FILE__) . 'rating.js', ['jquery'], '1.5.7', true);
     wp_localize_script('star-rating-script', 'starRatingAjax', [
         'ajaxurl' => admin_url('admin-ajax.php'),
@@ -196,8 +196,8 @@ add_shortcode('star_rating', function () {
                 </div>
 
                 <div class="rated-reviews">
-                    <span class="rated-reviews__counter2" id="js-ratingValue2"><?php echo $already_rated ? 'Thank you!' : 'Rate Us'; ?></span>
-                    <div id="star-rating" data-postid="<?php echo $post_id; ?>" data-rated="<?php echo $already_rated ? '1' : '0'; ?>">
+                    <span class="rated-reviews__counter2 " id="js-ratingValue2"><?php echo $already_rated ? 'Thank you!' : 'Rate Us'; ?></span>
+                    <div id="star-rating " class="<?php echo $already_rated ?'star_rated' : "" ?>" data-postid="<?php echo $post_id; ?>" data-rated="<?php echo $already_rated ? '1' : '0'; ?>">
                         <?php for ($i = 1; $i <= 5; $i++): ?>
                             <span class="star" data-value="<?php echo $i; ?>">&#9733;</span>
                         <?php endfor; ?>
