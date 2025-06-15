@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DT Star Rating System
  * Description: Adds a star rating to posts with IP and cookie-based voting protection.
- * Version: 1.18
+ * Version: 1.19
  * Author: D.T. Company
  */
 
@@ -38,7 +38,7 @@ register_activation_hook(__FILE__, function () {
         PRIMARY KEY (id),
         UNIQUE KEY unique_vote (post_id, ip_address)
     ) $charset_collate;";
-
+    update_post_ratings_table_structure();
     require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
     dbDelta($sql);
 });
@@ -1250,3 +1250,19 @@ function dt_star_rating_create_default_settings() {
 }
 add_action('wp_ajax_dt_star_rating_create_default_settings','dt_star_rating_create_default_settings');
 
+function update_post_ratings_table_structure() {
+    global $wpdb;
+
+    $table_name = $wpdb->prefix . 'post_ratings';
+
+    $sql = "
+        ALTER TABLE $table_name
+        ADD PRIMARY KEY (id),
+        ADD UNIQUE KEY unique_vote (post_id, ip_address),
+        ADD KEY post_parent_id (post_parent_id),
+        ADD KEY post_id (post_id) USING BTREE;
+    ";
+
+    // Run the query
+    $wpdb->query($sql);
+}
