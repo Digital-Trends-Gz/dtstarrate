@@ -2,7 +2,7 @@
 /**
  * Plugin Name: DT Star Rating System
  * Description: Adds a star rating to posts with IP and cookie-based voting protection.
- * Version: 1.16
+ * Version: 1.17
  * Author: D.T. Company
  */
 
@@ -46,7 +46,7 @@ register_activation_hook(__FILE__, function () {
 // Enqueue scripts and styles
 add_action('wp_enqueue_scripts', function () {
     wp_enqueue_style('star-rating-style', plugin_dir_url(__FILE__) . 'style.css', array(), '1.0.3');
-    wp_enqueue_script('star-rating-script', plugin_dir_url(__FILE__) . 'rating.js', ['jquery'], null, true);
+    wp_enqueue_script('star-rating-script', plugin_dir_url(__FILE__) . 'rating.js', ['jquery'], '1.5.7', true);
     wp_localize_script('star-rating-script', 'starRatingAjax', [
         'ajaxurl' => admin_url('admin-ajax.php'),
     ]);
@@ -81,7 +81,7 @@ function my_enqueue_bootstrap_admin_only($hook) {
     wp_enqueue_script( 'datatables-js', 'https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js', array( 'jquery' ), null, true );
     
     // Your custom script to initialize the table
-    wp_enqueue_script( 'dt-star-datatables-init', plugins_url( 'assets/js/datatable.js', __FILE__ ), array( 'datatables-js' ), null, true );
+    wp_enqueue_script( 'dt-star-datatables-init', plugins_url( 'assets/js/datatable.js', __FILE__ ), array( 'datatables-js' ), '5.4.3', true );
 
     }
          wp_enqueue_script( 'sweet_alerts_js',  plugin_dir_url(__FILE__) . 'assets/js/sweetalert.min.js', array( 'jquery' ), null, true );
@@ -126,8 +126,11 @@ add_shortcode('star_rating', function () {
 
     // Google snippet options
     $google_snippet = get_option('dt_star_rating_setting');
-    $google_enabled = $google_snippet["dt_google"];
+    if($google_snippet){
+   $google_enabled = $google_snippet["dt_google"];
     $types = $google_snippet["types"];
+    }
+ 
 
     // Get all ratings
     $ratings = $wpdb->get_results($wpdb->prepare(
@@ -194,43 +197,54 @@ add_shortcode('star_rating', function () {
     </div>
 
     <?php if ($google_enabled && !empty($types)): ?>
-        <?php foreach ($types as $type): ?>
-            <script type="application/ld+json">
-            {
-                "@type": "<?php echo esc_js($type); ?>",
-                "name": "<?php echo esc_js($app_name); ?>",
-                "alternateName": [
-                    "Instagram downloader",
-                    "<?php echo esc_js($app_name); ?>",
-                    "<?php echo esc_js($app_name); ?> APP",
-                    "<?php echo esc_js($app_name); ?>.com"
-                ],
-                "url": "<?php echo get_site_url(); ?>",
-                "image": "<?php echo get_theme_mod('custom_logo'); ?>",
-                "operatingSystem": "Windows, Linux, iOS, Android, OSX, macOS",
-                "applicationCategory": "UtilitiesApplication",
-                "featureList": [
-                    "HD Profile downloader",
-                    "Photo downloader",
-                    "Video Downloader",
-                    "Reel Downloader",
-                    "IGTV Downloader",
-                    "Gallery Downloader",
-                    "Story Downloader",
-                    "Highlights Downloader"
-                ],
-                "contentRating": "Everyone",
-                "aggregateRating": {
-                    "@type": "AggregateRating",
-                    "ratingValue": "<?php echo esc_js($avg); ?>",
-                    "reviewCount": "<?php echo esc_js($total_votes); ?>"
-                },
-                "offers": {
-                    "@type": "Offer",
-                    "price": "0"
-                }
-            }
-            </script>
+        <?php foreach ($types as $type):
+        if( intval($total_votes) == 0 && intval($avg) == 0.0){
+            $avg = 4.5;
+            $total_votes = 10;
+        }
+            
+            ?>
+            
+ <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "<?php echo esc_js($type); ?>",
+  "name": "<?php echo esc_js($app_name); ?>",
+  "alternateName": [
+    "Instagram downloader",
+    "<?php echo esc_js($app_name); ?>",
+    "<?php echo esc_js($app_name); ?> APP",
+    "<?php echo esc_js($app_name); ?>.com"
+  ],
+  "url": "<?php echo get_site_url(); ?>",
+  "image": "<?php echo get_theme_mod('custom_logo'); ?>",
+  "operatingSystem": "Windows, Linux, iOS, Android, OSX, macOS",
+  "applicationCategory": "UtilitiesApplication",
+  "featureList": [
+    "HD Profile downloader",
+    "Photo downloader",
+    "Video Downloader",
+    "Reel Downloader",
+    "IGTV Downloader",
+    "Gallery Downloader",
+    "Story Downloader",
+    "Highlights Downloader"
+  ],
+  "contentRating": "Everyone",
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "<?php echo esc_js($avg); ?>",
+    "reviewCount": "<?php echo esc_js($total_votes); ?>"
+  },
+  "offers": {
+    "@type": "Offer",
+     "priceCurrency": "USD",
+     "price": "0"
+  }
+}
+</script>
+
+    </script>
         <?php endforeach; ?>
     <?php endif; ?>
 

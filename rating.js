@@ -56,4 +56,33 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     });
+const allstars = document.querySelectorAll('.star');
+
+allstars.forEach((star, index) => {
+  star.addEventListener('mouseenter', () => {
+    for (let i = index; i < allstars.length; i--) {
+          if(allstars[i].classList.contains('hovered')){
+            continue;
+         
+
+        }else{
+             allstars[i].classList.add('hovered');
+        }
+    
+    }
+  });
+
+  star.addEventListener('mouseleave', () => {
+    for (let i = index; i < allstars.length; i--) {
+
+        if(allstars[i].classList.contains('hovered')){
+        allstars[i].classList.remove('hovered');
+
+        }else{
+            continue;
+        }
+    }
+  });
+});
+
 });

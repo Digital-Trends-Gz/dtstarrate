@@ -7,7 +7,9 @@
 #star-rating .star.selected {
     color: gold;
 }
-
+.star.hovered {
+  color: gold !important;
+}
 .rated {
 	box-sizing: border-box;
 	background: #f2f2f6;
